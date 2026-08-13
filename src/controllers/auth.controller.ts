@@ -123,3 +123,90 @@ export const login = async (req: Request, res: Response) => {
     refreshToken,
   });
 };
+
+export const refresh = async (req: Request, res: Response) => {
+  const { refreshToken } = req.body;
+
+  try {
+    const payload = jwt.verify(
+      refreshToken,
+      process.env.JWT_SECRET!
+    ) as jwt.JwtPayload;
+
+    const storedToken = await prisma.refreshToken.findUnique({
+      where: {
+        token: refreshToken,
+      },
+    });
+
+    if (!storedToken) {
+      return res.status(401).json({
+        error: "Unauthorized",
+      });
+    }
+
+    const userId = Number(payload.sub);
+
+    await prisma.refreshToken.delete({
+      where: {
+        token: refreshToken,
+      },
+    });
+
+    const newAccessToken = createAccessToken(userId);
+    const newRefreshToken = createRefreshToken(userId);
+
+    await prisma.refreshToken.create({
+      data: {
+        token: newRefreshToken,
+        userId,
+      },
+    });
+
+    return res.status(200).json({
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+    });
+  } catch {
+    return res.status(401).json({
+      error: "Unauthorized",
+    });
+  }
+};
+
+export const logout = async (req: Request, res: Response) => {
+  const userId = req.user!.sub;
+
+  await prisma.refreshToken.deleteMany({
+    where: {
+      userId,
+    },
+  });
+
+  return res.status(204).end();
+};
+
+export const me = async (req: Request, res: Response) => {
+  const userId = req.user!.sub;
+
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      name: true,
+      createdAt: true,
+    },
+  });
+
+  if (!user) {
+    return res.status(404).json({
+      error: "User not found",
+    });
+  }
+
+  return res.status(200).json(user);
+};
