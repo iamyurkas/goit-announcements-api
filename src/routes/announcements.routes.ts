@@ -1,4 +1,6 @@
 import { Router } from "express";
+import { z } from "zod";
+
 import { registry } from "../openapi.ts";
 
 import {
@@ -23,8 +25,26 @@ import {
 } from "../middleware/validate.ts";
 
 import { authenticate } from "../middleware/authenticate.ts";
+import upload from "../middleware/upload.ts";
 
 const router = Router();
+
+const createAnnouncementMultipartSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  price: z.coerce.number().positive(),
+  category: z.string(),
+  image: z
+    .any()
+    .openapi({
+      type: "string",
+      format: "binary",
+    })
+    .optional(),
+});
+
+const updateAnnouncementMultipartSchema =
+  createAnnouncementMultipartSchema.partial();
 
 router.get(
   "/",
@@ -41,6 +61,7 @@ router.get(
 router.post(
   "/",
   authenticate,
+  upload.single("image"),
   validateBody(createAnnouncementSchema),
   createAnnouncement
 );
@@ -49,6 +70,7 @@ router.patch(
   "/:id",
   authenticate,
   validateParams(announcementIdSchema),
+  upload.single("image"),
   validateBody(updateAnnouncementSchema),
   updateAnnouncement
 );
@@ -102,8 +124,8 @@ registry.registerPath({
   request: {
     body: {
       content: {
-        "application/json": {
-          schema: createAnnouncementSchema,
+        "multipart/form-data": {
+          schema: createAnnouncementMultipartSchema,
         },
       },
     },
@@ -128,8 +150,8 @@ registry.registerPath({
     params: announcementIdSchema,
     body: {
       content: {
-        "application/json": {
-          schema: updateAnnouncementSchema,
+        "multipart/form-data": {
+          schema: updateAnnouncementMultipartSchema,
         },
       },
     },

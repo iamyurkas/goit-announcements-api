@@ -2,12 +2,42 @@ import express from "express";
 import type { NextFunction, Request, Response } from "express";
 import swaggerUi from "swagger-ui-express";
 import cookieParser from "cookie-parser";
+import helmet from "helmet";
+import cors from "cors";
+import { pinoHttp } from "pino-http";
+
 import authRoutes from "./src/routes/auth.routes.ts";
 import announcementsRoutes from "./src/routes/announcements.routes.ts";
 
 import { generateOpenApiDocument } from "./src/openapi.ts";
+import logger from "./src/logger.ts";
 
 const app = express();
+
+app.use(
+  pinoHttp({
+    logger,
+  })
+);
+
+app.use(helmet());
+
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Not allowed by CORS"));
+    },
+  })
+);
 
 app.use(express.json());
 app.use(cookieParser());

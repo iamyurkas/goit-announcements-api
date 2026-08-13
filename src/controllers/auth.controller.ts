@@ -3,6 +3,8 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import prisma from "../../prisma/client.ts";
 
+import logger from "../logger.ts";
+
 const createAccessToken = (userId: number) => {
   return jwt.sign(
     { sub: userId },
@@ -47,6 +49,14 @@ export const register = async (req: Request, res: Response) => {
       name,
     },
   });
+
+  logger.info(
+    {
+      userId: user.id,
+      username: user.username,
+    },
+    "User registered"
+  );
 
   const accessToken = createAccessToken(user.id);
   const refreshToken = createRefreshToken(user.id);
@@ -95,6 +105,14 @@ export const login = async (req: Request, res: Response) => {
       error: "Invalid credentials",
     });
   }
+
+  logger.info(
+    {
+      userId: user.id,
+      username: user.username,
+    },
+    "User logged in"
+  );
 
   const accessToken = createAccessToken(user.id);
   const refreshToken = createRefreshToken(user.id);

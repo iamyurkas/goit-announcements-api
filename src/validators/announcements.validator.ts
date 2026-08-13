@@ -11,8 +11,9 @@ export const createAnnouncementSchema = z.object({
     .min(10, "Description must be at least 10 characters"),
 
   price: z
-    .number()
-    .positive("Price must be greater than 0"),
+  .coerce
+  .number()
+  .positive("Price must be greater than 0"),
 
   category: z
     .string()

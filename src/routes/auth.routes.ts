@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { registry } from "../openapi.ts";
+import rateLimit from "express-rate-limit";
 
 import {
   register,
@@ -22,6 +23,18 @@ import {
 import { authenticate } from "../middleware/authenticate.ts";
 
 const router = Router();
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: "Too many requests, please try again later",
+  },
+});
+
+router.use(authLimiter);
 
 router.post(
   "/register",

@@ -1,12 +1,18 @@
 import type { NextFunction, Request, Response } from "express";
 import type { ZodType } from "zod";
+import fs from "fs/promises";
 
 export const validateBody =
   (schema: ZodType) =>
-  (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     const result = schema.safeParse(req.body);
 
     if (!result.success) {
+      // Remove the file if body validation fails
+      if (req.file) {
+        await fs.unlink(req.file.path).catch(() => undefined);
+      }
+
       return res.status(400).json({
         error: "Validation failed",
         details: result.error.flatten().fieldErrors,
