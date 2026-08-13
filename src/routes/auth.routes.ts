@@ -1,6 +1,14 @@
 import { Router } from "express";
-import { registry } from "../openapi.ts";
 import rateLimit from "express-rate-limit";
+
+import {
+  registry,
+  authResponseSchema,
+  tokenPairResponseSchema,
+  userProfileResponseSchema,
+  errorResponseSchema,
+  validationErrorResponseSchema,
+} from "../openapi.ts";
 
 import {
   register,
@@ -83,9 +91,35 @@ registry.registerPath({
   responses: {
     201: {
       description: "User registered successfully",
+      content: {
+        "application/json": {
+          schema: authResponseSchema,
+        },
+      },
+    },
+    400: {
+      description: "Validation failed",
+      content: {
+        "application/json": {
+          schema: validationErrorResponseSchema,
+        },
+      },
     },
     409: {
       description: "Username or email already taken",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    429: {
+      description: "Too many requests",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
     },
   },
 });
@@ -107,9 +141,35 @@ registry.registerPath({
   responses: {
     200: {
       description: "Login successful",
+      content: {
+        "application/json": {
+          schema: authResponseSchema,
+        },
+      },
+    },
+    400: {
+      description: "Validation failed",
+      content: {
+        "application/json": {
+          schema: validationErrorResponseSchema,
+        },
+      },
     },
     401: {
       description: "Invalid credentials",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    429: {
+      description: "Too many requests",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
     },
   },
 });
@@ -131,9 +191,35 @@ registry.registerPath({
   responses: {
     200: {
       description: "New token pair returned",
+      content: {
+        "application/json": {
+          schema: tokenPairResponseSchema,
+        },
+      },
+    },
+    400: {
+      description: "Validation failed",
+      content: {
+        "application/json": {
+          schema: validationErrorResponseSchema,
+        },
+      },
     },
     401: {
       description: "Invalid refresh token",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    429: {
+      description: "Too many requests",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
     },
   },
 });
@@ -150,6 +236,19 @@ registry.registerPath({
     },
     401: {
       description: "Unauthorized",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    429: {
+      description: "Too many requests",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
     },
   },
 });
@@ -163,9 +262,35 @@ registry.registerPath({
   responses: {
     200: {
       description: "Current user profile",
+      content: {
+        "application/json": {
+          schema: userProfileResponseSchema,
+        },
+      },
     },
     401: {
       description: "Unauthorized",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    404: {
+      description: "User not found",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    429: {
+      description: "Too many requests",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
     },
   },
 });

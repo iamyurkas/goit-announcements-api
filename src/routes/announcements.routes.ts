@@ -1,7 +1,13 @@
 import { Router } from "express";
 import { z } from "zod";
 
-import { registry } from "../openapi.ts";
+import {
+  registry,
+  announcementResponseSchema,
+  announcementListResponseSchema,
+  errorResponseSchema,
+  validationErrorResponseSchema,
+} from "../openapi.ts";
 
 import {
   getAnnouncements,
@@ -30,10 +36,26 @@ import upload from "../middleware/upload.ts";
 const router = Router();
 
 const createAnnouncementMultipartSchema = z.object({
-  title: z.string(),
-  description: z.string(),
-  price: z.coerce.number().positive(),
-  category: z.string(),
+  title: z
+    .string()
+    .min(5)
+    .max(50),
+
+  description: z
+    .string()
+    .min(10),
+
+  price: z.coerce
+    .number()
+    .positive(),
+
+  category: z.enum([
+    "sale",
+    "service",
+    "job",
+    "other",
+  ]),
+
   image: z
     .any()
     .openapi({
@@ -44,7 +66,14 @@ const createAnnouncementMultipartSchema = z.object({
 });
 
 const updateAnnouncementMultipartSchema =
-  createAnnouncementMultipartSchema.partial();
+  createAnnouncementMultipartSchema
+    .partial()
+    .refine(
+      (data) => Object.keys(data).length > 0,
+      {
+        message: "At least one field is required",
+      }
+    );
 
 router.get(
   "/",
@@ -93,6 +122,19 @@ registry.registerPath({
   responses: {
     200: {
       description: "List of announcements",
+      content: {
+        "application/json": {
+          schema: announcementListResponseSchema,
+        },
+      },
+    },
+    400: {
+      description: "Validation failed",
+      content: {
+        "application/json": {
+          schema: validationErrorResponseSchema,
+        },
+      },
     },
   },
 });
@@ -108,9 +150,27 @@ registry.registerPath({
   responses: {
     200: {
       description: "Announcement found",
+      content: {
+        "application/json": {
+          schema: announcementResponseSchema,
+        },
+      },
+    },
+    400: {
+      description: "Validation failed",
+      content: {
+        "application/json": {
+          schema: validationErrorResponseSchema,
+        },
+      },
     },
     404: {
       description: "Announcement not found",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
     },
   },
 });
@@ -133,9 +193,27 @@ registry.registerPath({
   responses: {
     201: {
       description: "Announcement created",
+      content: {
+        "application/json": {
+          schema: announcementResponseSchema,
+        },
+      },
+    },
+    400: {
+      description: "Validation failed",
+      content: {
+        "application/json": {
+          schema: validationErrorResponseSchema,
+        },
+      },
     },
     401: {
       description: "Unauthorized",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
     },
   },
 });
@@ -159,12 +237,43 @@ registry.registerPath({
   responses: {
     200: {
       description: "Announcement updated",
+      content: {
+        "application/json": {
+          schema: announcementResponseSchema,
+        },
+      },
+    },
+    400: {
+      description: "Validation failed",
+      content: {
+        "application/json": {
+          schema: validationErrorResponseSchema,
+        },
+      },
+    },
+    401: {
+      description: "Unauthorized",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
     },
     403: {
       description: "Access denied",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
     },
     404: {
       description: "Announcement not found",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
     },
   },
 });
@@ -182,11 +291,37 @@ registry.registerPath({
     204: {
       description: "Announcement deleted",
     },
+    400: {
+      description: "Validation failed",
+      content: {
+        "application/json": {
+          schema: validationErrorResponseSchema,
+        },
+      },
+    },
+    401: {
+      description: "Unauthorized",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
     403: {
       description: "Access denied",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
     },
     404: {
       description: "Announcement not found",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
     },
   },
 });

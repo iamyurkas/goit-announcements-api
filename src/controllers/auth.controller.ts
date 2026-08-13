@@ -5,19 +5,34 @@ import prisma from "../../prisma/client.ts";
 
 import logger from "../logger.ts";
 
+type TokenPayload = {
+  sub: number;
+  type: "access" | "refresh";
+};
+
 const createAccessToken = (userId: number) => {
   return jwt.sign(
-    { sub: userId },
+    {
+      sub: userId,
+      type: "access",
+    },
     process.env.JWT_SECRET!,
-    { expiresIn: "15m" }
+    {
+      expiresIn: "15m",
+    }
   );
 };
 
 const createRefreshToken = (userId: number) => {
   return jwt.sign(
-    { sub: userId },
+    {
+      sub: userId,
+      type: "refresh",
+    },
     process.env.JWT_SECRET!,
-    { expiresIn: "7d" }
+    {
+      expiresIn: "7d",
+    }
   );
 };
 
@@ -117,18 +132,20 @@ export const login = async (req: Request, res: Response) => {
   const accessToken = createAccessToken(user.id);
   const refreshToken = createRefreshToken(user.id);
 
-  await prisma.refreshToken.deleteMany({
-    where: {
-      userId: user.id,
-    },
-  });
+  await prisma.$transaction([
+    prisma.refreshToken.deleteMany({
+      where: {
+        userId: user.id,
+      },
+    }),
 
-  await prisma.refreshToken.create({
-    data: {
-      token: refreshToken,
-      userId: user.id,
-    },
-  });
+    prisma.refreshToken.create({
+      data: {
+        token: refreshToken,
+        userId: user.id,
+      },
+    }),
+  ]);
 
   return res.status(200).json({
     user: {
@@ -145,51 +162,74 @@ export const login = async (req: Request, res: Response) => {
 export const refresh = async (req: Request, res: Response) => {
   const { refreshToken } = req.body;
 
-  try {
-    const payload = jwt.verify(
-      refreshToken,
-      process.env.JWT_SECRET!
-    ) as jwt.JwtPayload;
+  let payload: TokenPayload;
 
-    const storedToken = await prisma.refreshToken.findUnique({
-      where: {
-        token: refreshToken,
-      },
-    });
+try {
+  const decoded = jwt.verify(
+    refreshToken,
+    process.env.JWT_SECRET!
+  );
 
-    if (!storedToken) {
-      return res.status(401).json({
-        error: "Unauthorized",
-      });
-    }
-
-    const userId = Number(payload.sub);
-
-    await prisma.refreshToken.delete({
-      where: {
-        token: refreshToken,
-      },
-    });
-
-    const newAccessToken = createAccessToken(userId);
-    const newRefreshToken = createRefreshToken(userId);
-
-    await prisma.refreshToken.create({
-      data: {
-        token: newRefreshToken,
-        userId,
-      },
-    });
-
-    return res.status(200).json({
-      accessToken: newAccessToken,
-      refreshToken: newRefreshToken,
-    });
-  } catch {
+  if (
+    typeof decoded === "string" ||
+    decoded.type !== "refresh" ||
+    typeof decoded.sub !== "number"
+  ) {
     return res.status(401).json({
       error: "Unauthorized",
     });
   }
+
+  payload = {
+    sub: decoded.sub,
+    type: "refresh",
+  };
+} catch {
+  return res.status(401).json({
+    error: "Unauthorized",
+  });
+}
+
+  const storedToken = await prisma.refreshToken.findUnique({
+    where: {
+      token: refreshToken,
+    },
+  });
+
+  if (!storedToken) {
+    return res.status(401).json({
+      error: "Unauthorized",
+    });
+  }
+
+  if (storedToken.userId !== payload.sub) {
+    return res.status(401).json({
+      error: "Unauthorized",
+    });
+  }
+
+  const newAccessToken = createAccessToken(payload.sub);
+  const newRefreshToken = createRefreshToken(payload.sub);
+
+  await prisma.$transaction([
+    prisma.refreshToken.delete({
+      where: {
+        token: refreshToken,
+      },
+    }),
+
+    prisma.refreshToken.create({
+      data: {
+        token: newRefreshToken,
+        userId: payload.sub,
+      },
+    }),
+  ]);
+
+  return res.status(200).json({
+    accessToken: newAccessToken,
+    refreshToken: newRefreshToken,
+  });
 };
 
 export const logout = async (req: Request, res: Response) => {

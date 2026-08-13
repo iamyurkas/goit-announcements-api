@@ -1,7 +1,6 @@
 import express from "express";
 import type { NextFunction, Request, Response } from "express";
 import swaggerUi from "swagger-ui-express";
-import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import cors from "cors";
 import { pinoHttp } from "pino-http";
@@ -11,6 +10,10 @@ import announcementsRoutes from "./src/routes/announcements.routes.ts";
 
 import { generateOpenApiDocument } from "./src/openapi.ts";
 import logger from "./src/logger.ts";
+
+if (!process.env.JWT_SECRET) {
+  throw new Error("JWT_SECRET environment variable is required");
+}
 
 const app = express();
 
@@ -34,13 +37,19 @@ app.use(
         return callback(null, true);
       }
 
-      return callback(new Error("Not allowed by CORS"));
+      const error = new Error("Not allowed by CORS") as Error & {
+        status?: number;
+      };
+
+      error.status = 403;
+
+      return callback(error);
     },
   })
 );
 
 app.use(express.json());
-app.use(cookieParser());
+
 const openApiDocument = generateOpenApiDocument();
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));
 

@@ -3,21 +3,24 @@ import { z } from "zod";
 export const createAnnouncementSchema = z.object({
   title: z
     .string()
-    .min(3, "Title must be at least 3 characters")
-    .max(100, "Title must be at most 100 characters"),
+    .min(5, "Title must be at least 5 characters")
+    .max(50, "Title must be at most 50 characters"),
 
   description: z
     .string()
     .min(10, "Description must be at least 10 characters"),
 
   price: z
-  .coerce
-  .number()
-  .positive("Price must be greater than 0"),
+    .coerce
+    .number()
+    .positive("Price must be greater than 0"),
 
-  category: z
-    .string()
-    .min(1, "Category is required"),
+  category: z.enum([
+    "sale",
+    "service",
+    "job",
+    "other",
+  ]),
 });
 
 export const updateAnnouncementSchema =

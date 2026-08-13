@@ -27,13 +27,23 @@ export const authenticate = (
   const token = authHeader.split(" ")[1];
 
   try {
-    const payload = jwt.verify(
+    const decoded = jwt.verify(
       token,
       process.env.JWT_SECRET!
-    ) as jwt.JwtPayload;
+    );
+
+    if (
+      typeof decoded === "string" ||
+      decoded.type !== "access" ||
+      typeof decoded.sub !== "number"
+    ) {
+      return res.status(401).json({
+        error: "Unauthorized",
+      });
+    }
 
     req.user = {
-      sub: Number(payload.sub),
+      sub: decoded.sub,
     };
 
     next();
