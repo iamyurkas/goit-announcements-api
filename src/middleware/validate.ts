@@ -45,6 +45,7 @@ export const validateQuery =
       });
     }
 
-    req.query = result.data as typeof req.query;
+    res.locals.validatedQuery = result.data;
+
     next();
   };
