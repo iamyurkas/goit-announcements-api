@@ -164,31 +164,30 @@ export const refresh = async (req: Request, res: Response) => {
 
   let payload: TokenPayload;
 
-try {
-  const decoded = jwt.verify(
-    refreshToken,
-    process.env.JWT_SECRET!
-  );
+  try {
+    const decoded = jwt.verify(
+      refreshToken,
+      process.env.JWT_SECRET!
+    );
 
-  if (
-    typeof decoded === "string" ||
-    decoded.type !== "refresh" ||
-    typeof decoded.sub !== "number"
-  ) {
+    if (
+      typeof decoded === "string" ||
+      decoded.type !== "refresh" ||
+      typeof decoded.sub !== "number"
+    ) {
+      return res.status(401).json({
+      error: "Unauthorized",
+    });
+    }
+    payload = {
+      sub: decoded.sub,
+      type: "refresh",
+    };
+  } catch {
     return res.status(401).json({
       error: "Unauthorized",
     });
   }
-
-  payload = {
-    sub: decoded.sub,
-    type: "refresh",
-  };
-} catch {
-  return res.status(401).json({
-    error: "Unauthorized",
-  });
-}
 
   const storedToken = await prisma.refreshToken.findUnique({
     where: {
